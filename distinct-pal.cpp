@@ -1,110 +1,77 @@
+/* 1960. Palindromes and Super Abilities - http://acm.timus.ru/problem.aspx?num=1960
+ *
+ * Strategy:
+ * Palindromic tree.
+ *
+ * Performance:
+ * O(n), runs the test cases in 0.046s using 11244KB memory (rated 13/214).
+ */
 
-#include <bits/stdc++.h>
-using namespace std;
+#include <stdio.h>
+#include <cstring>
 
-const int MAXN = 100005;
+const int maxn = 100000;
 
-struct Node {
-    int next[26];
-    int len;
-    int link;
+struct Node
+{
+    Node* out[1 + 'z'-'a'];
+    Node* next; // Link to the longest palindromic suffix of this palindrome
+    int width; // Size of this palindrome
+} nodes[maxn];
 
-    Node() {
-        memset(next, 0, sizeof(next));
-        len = 0;
-        link = 0;
-    }
-};
+Node* r1[1 + 'z'-'a'];
+Node* r2[1 + 'z'-'a'];
+int len, n, c;
+Node* head;
+char str[maxn+1];
 
-Node tree[MAXN];
-
-string s;
-int sz, suff;
-
-void init() {
-    sz = 2;
-
-    // Root 0: length -1
-    tree[0] = Node();
-    tree[0].len = -1;
-    tree[0].link = 0;
-
-    // Root 1: length 0
-    tree[1] = Node();
-    tree[1].len = 0;
-    tree[1].link = 0;
-
-    suff = 1;
+void jumpTo(Node**& cur, Node*& newNode, int width) // Updates the suffix links of the tree
+{
+    if(!newNode)
+        newNode = &nodes[n++];
+    *cur = newNode; // The ->next of the previous node, or head, will now point to this new node
+    cur = &(newNode->next); // The new cur points to the ->next of this node
+    newNode->width = width;
 }
 
-int getLink(int v, int pos) {
-
-    while (true) {
-        int len = tree[v].len;
-
-        if (pos - 1 - len >= 0 &&
-            s[pos - 1 - len] == s[pos]) {
-            return v;
+int addChar()
+{
+    Node** cur = &head; // cur points at the ->next of the previous node, which points to this node
+    char ch = str[c]-'a';
+    while(true)
+    {
+        Node* node = *cur;
+        if(node == 0) // Special case for the root vertex
+        {
+            if(c > 0 && str[c] == str[c-1])
+                jumpTo(cur, r2[ch], 2);
+            jumpTo(cur, r1[ch], 1);
+            break;
         }
-
-        v = tree[v].link;
+        else if(c-node->width > 0 && str[c] == str[c-node->width-1]) // This suffix is a palindrome
+        {
+            if(node->out[ch]) // If we already had a node representing this palindrome suffix, break
+            {
+                *cur = node->out[ch];
+                break;
+            }
+            else // Otherwise, add it and recurse
+            {
+                jumpTo(cur, node->out[ch], node->width + 2);
+                node->out[ch]->next = node->next;
+            }
+        }
+        else
+            *cur = (*cur)->next;
     }
+    c++;
+    return n;
 }
 
-void addChar(int pos) {
-
-    int c = s[pos] - 'a';
-
-    int cur = getLink(suff, pos);
-
-    // Palindrome already exists
-    if (tree[cur].next[c]) {
-        suff = tree[cur].next[c];
-        return;
-    }
-
-    // Create a new palindrome
-    int nw = sz++;
-
-    tree[nw] = Node();
-    tree[nw].len = tree[cur].len + 2;
-
-    tree[cur].next[c] = nw;
-
-    // Length 1 palindrome
-    if (tree[nw].len == 1) {
-        tree[nw].link = 1;
-    }
-    else {
-        int linkCandidate = getLink(tree[cur].link, pos);
-
-        tree[nw].link =
-            tree[linkCandidate].next[c];
-    }
-
-    suff = nw;
-}
-
-int main() {
-
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
-
-    cin >> s;
-
-    init();
-
-    for (int i = 0; i < (int)s.size(); i++) {
-
-        addChar(i);
-
-        cout << sz - 2;
-
-        if (i + 1 < (int)s.size())
-            cout << " ";
-    }
-
-    cout << '\n';
-
-    return 0;
+int main()
+{
+    scanf("%s", str);
+    len = strlen(str);
+    while(len--)
+        printf("%d ", addChar());
 }
